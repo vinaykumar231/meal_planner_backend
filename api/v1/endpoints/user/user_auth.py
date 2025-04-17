@@ -20,7 +20,7 @@ utc_now = pytz.utc.localize(datetime.utcnow())
 ist_now = utc_now.astimezone(pytz.timezone('Asia/Kolkata'))
 
 def generate_otp():
-    return str(random.randint(100000, 999999))
+    return str(random.randint(1000, 9999))
 
 def validate_email(email):
         email_pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
@@ -33,7 +33,7 @@ def validate_phone_number(phone_number):
         phone_pattern = r"^\d{10}$"
         return re.match(phone_pattern, phone_number)
 
-
+   
 @router.post("/v1/auth/pre-register/email_verify", response_model=None)
 async def pre_register(email: str, db: Session = Depends(get_db)):
     try:
@@ -74,11 +74,14 @@ async def pre_register(email: str, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Unexpected error occurred please try again")
 
-    
+class Otpverify(BaseModel):
+    email: str
+    otp_code: str
+      
 @router.post("/v1/auth/pre-register/verify-otp")
-async def verify_otp(email: str, otp_code: str, db: Session = Depends(get_db)):
+async def verify_otp(data:Otpverify, db: Session = Depends(get_db)):
     try:
-        otp_entry = db.query(OTP).filter(OTP.email == email).order_by(OTP.generated_at.desc()).first()
+        otp_entry = db.query(OTP).filter(OTP.email == data.email).order_by(OTP.generated_at.desc()).first()
 
         if not otp_entry:
             raise HTTPException(status_code=404, detail="OTP not found")
@@ -89,7 +92,7 @@ async def verify_otp(email: str, otp_code: str, db: Session = Depends(get_db)):
         if otp_entry.expired_at < datetime.utcnow():
             raise HTTPException(status_code=400, detail="OTP has expired")
 
-        if otp_entry.otp_code != otp_code:
+        if otp_entry.otp_code != data.otp_code:
             otp_entry.attempt_count = (otp_entry.attempt_count or 0) + 1
             db.commit()
             raise HTTPException(status_code=400, detail="Invalid OTP")
@@ -117,8 +120,8 @@ def register(user: RegisterUser, db: Session = Depends(get_db)):
         if not otp_entry:
             raise HTTPException(status_code=400, detail="Please verify your email before registration.")
 
-        if user.user_password != user.confirm_password:
-            raise HTTPException(status_code=400, detail="Passwords do not match")
+        # if user.user_password != user.confirm_password:
+        #     raise HTTPException(status_code=400, detail="Passwords do not match")
 
         if not validate_email(user.user_email):
             raise HTTPException(status_code=400, detail="Invalid email format")
@@ -140,8 +143,8 @@ def register(user: RegisterUser, db: Session = Depends(get_db)):
             email=user.user_email,
             phone_number=user.phone,
             password_hash=hashed_password,
-            user_type=user.user_type,
-            status=user.status,
+            # user_type=user.user_type,
+            # status=user.status,
             created_at=datetime.utcnow(),
             is_verified=True 
         )
@@ -170,7 +173,7 @@ async def login(user: LoginUser, db: Session = Depends(get_db)):
             raise HTTPException(status_code=404, detail="User does not exist. Please register.")
 
         if not bcrypt.checkpw(user.password.encode('utf-8'), user_db.password_hash.encode('utf-8')):
-            raise HTTPException(status_code=401, detail="Invalid credentials")
+            raise HTTPException(status_code=401, detail="Passwords do not match")
 
         otp = generate_otp()
         now = datetime.utcnow()
@@ -219,15 +222,15 @@ def verify_otp(data: OTPVerify, db: Session = Depends(get_db)):
         if not otp_entry:
             raise HTTPException(status_code=404, detail="No active OTP found")
 
-        if otp_entry.purpose != "login":
-            raise HTTPException(status_code=400, detail="Invalid OTP")
+        # if otp_entry.purpose != "login":
+        #     raise HTTPException(status_code=400, detail="Invalid OTP")
 
         if datetime.utcnow() > otp_entry.expired_at:
             otp_entry.otp_code = None
             db.commit()
             raise HTTPException(status_code=400, detail="OTP has expired")
 
-        if otp_entry.otp_code != data.otp:
+        if otp_entry.otp_code != data.otp_code:
             otp_entry.attempt_count = (otp_entry.attempt_count or 0) + 1
             db.commit()
 

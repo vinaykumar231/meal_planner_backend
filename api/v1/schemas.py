@@ -33,9 +33,9 @@ class RegisterUser(BaseModel):
     user_email: EmailStr
     phone: str
     user_password: str
-    confirm_password: str
-    user_type: UserType = UserType.user
-    status: StatusEnum
+    #confirm_password: str
+    # user_type: UserType = UserType.user
+    # status: StatusEnum
 
 class LoginUser(BaseModel):
     email: EmailStr
@@ -44,7 +44,7 @@ class LoginUser(BaseModel):
 
 class OTPVerify(BaseModel):
     email: EmailStr
-    otp: str
+    otp_code: str
 
 
 class RegisterUserResponse(BaseModel):

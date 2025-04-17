@@ -4,7 +4,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from db.session import Base, engine,get_db
-from api.v1.endpoints import user_router, google_router
+from api.v1.endpoints.user import user_router, google_router
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
